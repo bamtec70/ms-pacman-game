@@ -12,7 +12,7 @@
   const W = COLS * TILE; // 672
   const H = ROWS * TILE; // 744
   const S = TILE / 16;
-  const SPEED = 200; // px/sec base — step must exceed align epsilon
+  const SPEED = 210; // px/sec base — step must exceed align epsilon
 
   const WALL = 0, DOT = 1, EMPTY = 2, POWER = 3, GATE = 4, HOUSE = 5;
 
@@ -26,14 +26,18 @@
 
 
 
+
   // 0=wall 1=dot 2=empty 3=power 4=gate 5=house
-  // Four Midway Ms. Pac-Man boards — unique pattern + arcade wall color each.
-  // Level map: 1–2 pink, 3–5 cyan (dual tunnels), 6–9 orange, 10+ blue.
+  // Midway board schedule (IMPORTANT):
+  //   Levels 1–2  → PINK maze (same layout both levels; speed rises on 2)
+  //   Levels 3–5  → CYAN maze (new pattern + dual tunnels)
+  //   Levels 6–9  → ORANGE maze
+  //   Levels 10+  → DARK BLUE maze
   const MAZE_META = [
-    { name: "1-PINK", wall: "#ff9ecd", inner: "#ff69b4", flash: "#ffffff", tunnels: [14], dot: "#ffb8ff" },
-    { name: "2-CYAN", wall: "#7fffff", inner: "#00e8e8", flash: "#ffffff", tunnels: [8, 22], dot: "#b8ffff" },
-    { name: "3-ORANGE", wall: "#ffc878", inner: "#ff9a2e", flash: "#ffffff", tunnels: [14], dot: "#ffe0b0" },
-    { name: "4-BLUE", wall: "#5a5aff", inner: "#2121de", flash: "#ffffff", tunnels: [14], dot: "#b8b8ff" }
+    { name: "PINK", wall: "#ff7eb9", inner: "#ff1493", flash: "#ffffff", tunnels: [14], dot: "#ffc0e0" },
+    { name: "CYAN", wall: "#00ffff", inner: "#00b7b7", flash: "#ffffff", tunnels: [8, 22], dot: "#a0ffff" },
+    { name: "ORANGE", wall: "#ffb347", inner: "#ff8c00", flash: "#ffffff", tunnels: [14], dot: "#ffd9a0" },
+    { name: "BLUE", wall: "#4169ff", inner: "#0000cd", flash: "#ffffff", tunnels: [14], dot: "#a0b0ff" }
   ];
 
   const MAZES = [
@@ -73,48 +77,48 @@
     [
       "0000000000000000000000000000",
       "0111111111111111111111111110",
-      "0100001000001001000001000010",
-      "0300001000001001000001000030",
-      "0111111001111001111001111110",
-      "0001001001000000001001001000",
-      "0001001001000000001001001000",
-      "0111111111111001111111111110",
-      "2222220000001001000000222222",
-      "0000001111111221111111000000",
-      "0111001001111221111001001110",
+      "0100000000001001000000000010",
+      "0301111111111001111111111030",
+      "0101000000001001000000001010",
+      "0111011111111111111111101110",
+      "0001001000000000000001001000",
+      "0111001001111001111001001110",
+      "2222221001001001001001222222",
+      "0000001001000000001001000000",
+      "0111111001111221111001111110",
       "0000001001111221111001000000",
       "0000001001000440001001000000",
       "0000001001055555501001000000",
       "0000001111055555501111000000",
       "0000001001055555501001000000",
       "0000001001000000001001000000",
-      "0111111001111111111001111110",
-      "0100001000001001000001000010",
-      "0100001000001001000001000010",
-      "0311111111111001111111111130",
-      "0001001001000000001001001000",
-      "2222221001000000001001222222",
+      "0111111111111111111111111110",
+      "0100000000001001000000000010",
+      "0101111111111001111111111010",
+      "0101000000000000000000001010",
+      "0301011111111001111111101030",
+      "2222221000001001000001222222",
       "0111111001111221111001111110",
-      "0100000000001001000000000010",
-      "0100000000001001000000000010",
-      "0111111111111221111111111110",
-      "0100001000001001000001000010",
-      "0100001000001001000001000010",
-      "0111111111111001111111111110",
+      "0100001001000000001001000010",
+      "0100001001000000001001000010",
+      "0111111001111001111001111110",
+      "0001000000001001000000001000",
+      "0001000000001001000000001000",
+      "0111111111111111111111111110",
       "0000000000000000000000000000",
     ],
     [
       "0000000000000000000000000000",
       "0111111001111111111001111110",
-      "0100001001000000001001000010",
       "0300001001000000001001000030",
-      "0111111111111001111111111110",
-      "0100000001001001001000000010",
-      "0100000001001001001000000010",
-      "0111111111001001001111111110",
-      "0000001000001001000001000000",
-      "0000001001111221111001000000",
-      "0111111001001221001001111110",
+      "0111001001000000001001001110",
+      "0001001111111001111111001000",
+      "0001001000001001000001001000",
+      "0111111000001001000001111110",
+      "0100001111111111111111000010",
+      "0100001000001001000001000010",
+      "0111111001111221111001111110",
+      "0000001001001221001001000000",
       "0000001001111221111001000000",
       "0000001001000440001001000000",
       "0000001001055555501001000000",
@@ -122,11 +126,11 @@
       "0000001001055555501001000000",
       "0000001001000000001001000000",
       "0111111001111111111001111110",
-      "0001001000001001000001001000",
-      "0001001000001001000001001000",
-      "0111111111111001111111111110",
-      "0100001000000000000001000010",
-      "0300001000000000000001000030",
+      "0100001000001001000001000010",
+      "0111001111111001111111001110",
+      "0001001000000000000001001000",
+      "0301001000000000000001001030",
+      "0101111001111221111001111010",
       "0111001111111221111111001110",
       "0001001001000000001001001000",
       "0001001001000000001001001000",
@@ -139,15 +143,15 @@
     [
       "0000000000000000000000000000",
       "0111111111111001111111111110",
-      "0100000000001001000000000010",
-      "0301111111111111111111111030",
-      "0101001000001001000001001010",
-      "0111001000001001000001001110",
+      "0100001000001001000001000010",
+      "0301111011111111111101111030",
+      "0101001010001001000101001010",
+      "0111001010001001000101001110",
       "0001001111111001111111001000",
       "0001001000000000000001001000",
-      "0111111000001001000001111110",
-      "0100001000001001000001000010",
-      "0100001001111221111001000010",
+      "0111111011111001111101111110",
+      "0100001010001001000101000010",
+      "0100001011111221111101000010",
       "0000001001111221111001000000",
       "0000001001000440001001000000",
       "0000001001055555501001000000",
@@ -155,28 +159,27 @@
       "0000001001055555501001000000",
       "0000001001000000001001000000",
       "0100001001111111111001000010",
-      "0100001001000000001001000010",
-      "0111111111001001001111111110",
-      "0100000000001001000000000010",
-      "0100000000001001000000000010",
-      "0311111111111221111111111130",
+      "0111111001000000001001111110",
+      "0100000001001001001000000010",
+      "0101111111001001001111111010",
+      "0101000000001001000000001010",
+      "0301011111111221111111101030",
       "0101001111111221111111001010",
-      "0101001001000000001001001010",
-      "0101001001000000001001001010",
+      "0111001001000000001001001110",
+      "0001001001000000001001001000",
       "0111001111111001111111001110",
-      "0001001000001001000001001000",
-      "0001001000001001000001001000",
+      "0100000000001001000000000010",
+      "0100000000001001000000000010",
       "0111111111111111111111111110",
       "0000000000000000000000000000",
     ],
   ];
 
   function mazeIndexForLevel(lv) {
-    // Exact Midway board schedule
-    if (lv <= 2) return 0;  // pink
-    if (lv <= 5) return 1;  // light blue / cyan (dual tunnels)
-    if (lv <= 9) return 2;  // orange
-    return 3;               // dark blue
+    if (lv <= 2) return 0;
+    if (lv <= 5) return 1;
+    if (lv <= 9) return 2;
+    return 3;
   }
 
   let mazeIndex = 0;
@@ -188,17 +191,18 @@
   }
   function isTunnelRow(r) { return tunnelRows().indexOf(r) >= 0; }
 
-  /** Apply board chrome (border / glow) when maze changes */
   function applyMazeTheme() {
     const meta = MAZE_META[mazeIndex] || MAZE_META[0];
     const wrap = document.getElementById("canvas-wrap");
     if (wrap) {
       wrap.style.borderColor = meta.wall;
-      wrap.style.boxShadow = "0 0 40px " + meta.inner + "66";
+      wrap.style.boxShadow = "0 0 48px " + meta.inner + "99";
+      wrap.style.background = "#000";
     }
     document.documentElement.style.setProperty("--maze-wall", meta.wall);
     document.documentElement.style.setProperty("--maze-inner", meta.inner);
   }
+
 
 
 
@@ -271,25 +275,24 @@
    */
   function params(lv) {
     const n = Math.min(Math.max(lv, 1), 21);
-    // Pac-Man
-    let pac = 0.80;
-    if (n >= 2 && n <= 4) pac = 0.90;
-    else if (n >= 5 && n <= 20) pac = 1.00;
-    else if (n >= 21) pac = 0.90;
+    // Level 1 slowest; level 2 same pink maze but clearly faster.
+    let pac = 0.78;
+    let ghost = 0.70;
+    if (n === 2) { pac = 0.90; ghost = 0.86; }
+    else if (n === 3 || n === 4) { pac = 0.94; ghost = 0.90; }
+    else if (n >= 5 && n <= 8) { pac = 1.00; ghost = 0.96; }
+    else if (n >= 9 && n <= 12) { pac = 1.00; ghost = 0.98; }
+    else if (n >= 13 && n <= 20) { pac = 0.95; ghost = 0.95; }
+    else if (n >= 21) { pac = 0.90; ghost = 0.95; }
 
-    // Ghosts — normal maze
-    let ghost = 0.75;
-    if (n >= 2 && n <= 4) ghost = 0.85;
-    else if (n >= 5) ghost = 0.95;
-
-    // Frightened
-    let fright = 0.50;
-    if (n >= 2 && n <= 4) fright = 0.55;
+    let fright = 0.48;
+    if (n === 2) fright = 0.54;
+    else if (n >= 3 && n <= 4) fright = 0.56;
     else if (n >= 5) fright = 0.60;
 
-    // Tunnel (ghosts only — Pac keeps full speed)
-    let tunnel = 0.40;
-    if (n >= 2 && n <= 4) tunnel = 0.45;
+    let tunnel = 0.38;
+    if (n === 2) tunnel = 0.44;
+    else if (n >= 3 && n <= 4) tunnel = 0.46;
     else if (n >= 5) tunnel = 0.50;
 
     // Cruise Elroy (Blinky) — dots remaining thresholds + speeds
@@ -529,22 +532,32 @@
   }
 
   function beginLevel(n) {
+    const prevMazeIdx = mazeIndexForLevel(level);
     level = n;
     P = params(level);
     WAVES = modeSchedule(level);
     srand((level * 0x9E37 + (score & 0xFFFF)) & 0xFFFF);
-    buildMap(); // sets mazeIndex + wall color/pattern for this level
+    buildMap(); // mazeIndex + wall color/pattern for this level
     fullReset(true);
     state = "ready";
-    readyT = 2200;
+    readyT = 2800;
     hud();
-    // Flash the new board identity so maze changes are obvious
-    const boardNames = ["PINK MAZE", "BLUE MAZE", "ORANGE MAZE", "DARK BLUE MAZE"];
-    showOV("READY!", boardNames[mazeIndex] || "", null);
-    // Brief title of the maze, then classic READY on canvas
+
+    // Arcade: levels 1–2 share PINK maze; NEW maze at 3, 6, and 10.
+    const boardNames = ["PINK MAZE", "CYAN MAZE", "ORANGE MAZE", "BLUE MAZE"];
+    const mazeChanged = level === 1 || mazeIndex !== prevMazeIdx;
+    let sub;
+    if (level === 1) sub = "PINK MAZE";
+    else if (mazeChanged) sub = "NEW MAZE — " + boardNames[mazeIndex];
+    else sub = "SAME MAZE — FASTER!";
+
+    showOV("LEVEL " + level, sub, null);
+    setTimeout(() => {
+      if (state === "ready") showOV("READY!", boardNames[mazeIndex], null);
+    }, 1400);
     setTimeout(() => {
       if (state === "ready") showOV("READY!", "", "ready");
-    }, 700);
+    }, 2200);
     sfx("start");
   }
 
@@ -1815,10 +1828,14 @@
     if (pac) drawPac();
 
     if (state === "ready") {
-      ctx.fillStyle = "#ffff00";
-      ctx.font = `${Math.round(14 * S)}px 'Press Start 2P', monospace`;
+      const meta = MAZE_META[mazeIndex] || MAZE_META[0];
+      ctx.fillStyle = meta.wall;
+      ctx.font = `${Math.round(8 * S)}px 'Press Start 2P', monospace`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
+      ctx.fillText(meta.name + "  L" + level, W / 2, midY(11));
+      ctx.fillStyle = "#ffff00";
+      ctx.font = `${Math.round(14 * S)}px 'Press Start 2P', monospace`;
       ctx.fillText("READY!", W / 2, midY(17));
     }
   }
