@@ -237,10 +237,16 @@
     ];
   }
 
-  // Arcade fruit: cherry, strawberry, orange, pretzel, apple, pear, banana
+  // Midway Ms. Pac-Man bonus foods (level 1→7+): same two fruits per board
+  // Cherry 100, Strawberry 200, Orange 500, Pretzel 700, Apple 1000, Pear 2000, Banana 5000
   const FRUIT = [
-    { e: "🍒", p: 100 }, { e: "🍓", p: 200 }, { e: "🍊", p: 500 }, { e: "🥨", p: 700 },
-    { e: "🍎", p: 1000 }, { e: "🍐", p: 2000 }, { e: "🍌", p: 5000 }, { e: "🍌", p: 5000 },
+    { id: "cherry",     e: "🍒", p: 100  },
+    { id: "strawberry", e: "🍓", p: 200  },
+    { id: "orange",     e: "🍊", p: 500  },
+    { id: "pretzel",    e: "🥨", p: 700  },
+    { id: "apple",      e: "🍎", p: 1000 },
+    { id: "pear",       e: "🍐", p: 2000 },
+    { id: "banana",     e: "🍌", p: 5000 },
   ];
 
   /**
@@ -299,7 +305,7 @@
       frightMs,
       flashMs: Math.min(2000, frightMs),
       inkyDots, sueDots,
-      fruit: Math.min(n - 1, 7),
+      fruit: Math.min(n - 1, 6), // banana from level 7 onward
       house: 0.40,   // slow bob / exit from house
       eyes: 1.35,    // eaten eyes race home (sub-stepped so they still corner)
     };
@@ -1018,17 +1024,19 @@
   }
 
   function fruitWalkable(c, r) {
-    if (isTunnelRow(r) && (c < 0 || c >= COLS)) return true;
-    const t = tile(c, r);
+    // No tunnel wrap here — fruit must tour the interior, not short-cut off-map
+    if (c < 0 || r < 0 || c >= COLS || r >= ROWS) return false;
+    const t = map[r][c];
     return t === EMPTY || t === DOT || t === POWER;
   }
 
   /**
-   * Arcade fruit: enters from a side tunnel, tours corridors via BFS
-   * waypoints, then exits the opposite tunnel (never a static center fruit).
+   * BFS through corridors only (no tunnel wrap).
+   * Returns tile list from start→goal excluding start, including goal.
    */
   function fruitBfs(sc, sr, tc, tr) {
     if (sc === tc && sr === tr) return [];
+    if (!fruitWalkable(sc, sr) || !fruitWalkable(tc, tr)) return null;
     const key = (c, r) => c + "," + r;
     const q = [[sc, sr]];
     const came = new Map();
@@ -1038,9 +1046,7 @@
       const [c, r] = q[head++];
       if (c === tc && r === tr) { found = true; break; }
       for (const d of ORDER) {
-        let nc = c + d.x, nr = r + d.y;
-        if (isTunnelRow(nr) && nc < 0) nc = COLS - 1;
-        if (isTunnelRow(nr) && nc >= COLS) nc = 0;
+        const nc = c + d.x, nr = r + d.y;
         const k = key(nc, nr);
         if (came.has(k)) continue;
         if (!fruitWalkable(nc, nr)) continue;
@@ -1061,42 +1067,109 @@
     return rev;
   }
 
-  function buildFruitPath(fromLeft) {
-    const startC = fromLeft ? 1 : COLS - 2;
-    const endC = fromLeft ? COLS - 2 : 1;
-    const tr = 14;
-    // Tour stops: upper lane → lower lane → exit (Ms. Pac bounce style)
-    const stops = [
-      { c: startC, r: tr },
-      { c: 9, r: 11 },
-      { c: 18, r: 11 },
-      { c: 18, r: 17 },
-      { c: 9, r: 17 },
-      { c: 9, r: 23 },
-      { c: 18, r: 23 },
-      { c: endC, r: tr },
-    ];
-    // Keep only walkable stops
-    const pts = stops.filter((p) => fruitWalkable(p.c, p.r));
-    if (pts.length < 2) {
-      return [
-        { c: startC, r: tr },
-        { c: endC, r: tr },
-        { c: fromLeft ? COLS : -1, r: tr },
-      ];
-    }
-    const path = [];
-    for (let i = 0; i < pts.length - 1; i++) {
-      const a = pts[i], b = pts[i + 1];
-      const seg = fruitBfs(a.c, a.r, b.c, b.r);
-      if (seg) {
-        for (const p of seg) path.push(p);
-      } else {
-        path.push(b);
+  function fruitIntersections() {
+    const out = [];
+    for (let r = 1; r < ROWS - 1; r++) {
+      for (let c = 1; c < COLS - 1; c++) {
+        if (!fruitWalkable(c, r)) continue;
+        let n = 0;
+        for (const d of ORDER) if (fruitWalkable(c + d.x, r + d.y)) n++;
+        if (n >= 3) out.push({ c, r });
       }
     }
-    // Exit off the far side of the tunnel
-    path.push({ c: fromLeft ? COLS : -1, r: tr });
+    return out;
+  }
+
+  /**
+   * Ms. Pac-Man style: enter a tunnel mouth, bounce through the maze
+   * via several corridor junctions, exit the opposite tunnel.
+   */
+  function buildFruitPath(fromLeft) {
+    const tr = 14;
+    // Innermost walkable tiles at the tunnel mouths
+    let startC = fromLeft ? 0 : COLS - 1;
+    let endC = fromLeft ? COLS - 1 : 0;
+    while (startC >= 0 && startC < COLS && !fruitWalkable(startC, tr)) {
+      startC += fromLeft ? 1 : -1;
+    }
+    while (endC >= 0 && endC < COLS && !fruitWalkable(endC, tr)) {
+      endC += fromLeft ? -1 : 1;
+    }
+    if (startC < 0 || startC >= COLS || endC < 0 || endC >= COLS) return [];
+
+    const inters = fruitIntersections();
+    const upper = inters.filter((p) => p.r <= 11);
+    const midA = inters.filter((p) => p.r >= 8 && p.r <= 13 && p.c !== 14);
+    const lower = inters.filter((p) => p.r >= 17);
+    const bottom = inters.filter((p) => p.r >= 20);
+
+    function pick(arr, preferSide) {
+      if (!arr || !arr.length) return null;
+      // Bias away from entry side so path crosses the board
+      let pool = arr;
+      if (preferSide === "right") {
+        const r = arr.filter((p) => p.c >= 14);
+        if (r.length) pool = r;
+      } else if (preferSide === "left") {
+        const l = arr.filter((p) => p.c < 14);
+        if (l.length) pool = l;
+      }
+      return pool[randInt(pool.length)];
+    }
+
+    // Build a multi-stop tour (enter → upper → lower → far side → exit)
+    const near = fromLeft ? "left" : "right";
+    const far = fromLeft ? "right" : "left";
+    const stops = [{ c: startC, r: tr }];
+    const s1 = pick(upper, far) || pick(midA, far) || pick(inters, far);
+    const s2 = pick(lower, near) || pick(bottom, near) || pick(inters, near);
+    const s3 = pick(bottom, far) || pick(lower, far) || pick(upper, far);
+    const s4 = pick(upper, near) || pick(midA, near);
+    if (s1) stops.push(s1);
+    if (s2) stops.push(s2);
+    if (s3) stops.push(s3);
+    if (s4) stops.push(s4);
+    stops.push({ c: endC, r: tr });
+
+    // Deduplicate consecutive stops
+    const clean = [stops[0]];
+    for (let i = 1; i < stops.length; i++) {
+      const a = clean[clean.length - 1], b = stops[i];
+      if (a.c !== b.c || a.r !== b.r) clean.push(b);
+    }
+
+    const path = [];
+    for (let i = 0; i < clean.length - 1; i++) {
+      const a = clean[i], b = clean[i + 1];
+      const seg = fruitBfs(a.c, a.r, b.c, b.r);
+      if (seg && seg.length) {
+        for (const p of seg) path.push(p);
+      } else {
+        // Skip unreachable stop; try bridge via a mid intersection
+        const bridge = pick(inters, null);
+        if (bridge) {
+          const s1b = fruitBfs(a.c, a.r, bridge.c, bridge.r);
+          const s2b = fruitBfs(bridge.c, bridge.r, b.c, b.r);
+          if (s1b && s2b) {
+            for (const p of s1b) path.push(p);
+            for (const p of s2b) path.push(p);
+            continue;
+          }
+        }
+      }
+    }
+
+    // Fallback: single BFS from entrance to exit through the maze interior
+    if (path.length < 8) {
+      const direct = fruitBfs(startC, tr, endC, tr);
+      if (direct && direct.length) {
+        path.length = 0;
+        for (const p of direct) path.push(p);
+      }
+    }
+
+    // Exit off the far tunnel mouth (drawn path continues out of bounds)
+    path.push({ c: fromLeft ? COLS : -1, r: tr, exit: true });
     return path;
   }
 
@@ -1104,45 +1177,63 @@
     const f = FRUIT[P.fruit];
     const fromLeft = rand01() < 0.5;
     const path = buildFruitPath(fromLeft);
+    if (!path.length) return; // safety
+
+    // Start just inside the tunnel mouth
+    const tr = 14;
+    const sc = fromLeft ? 0 : COLS - 1;
+    let startC = sc;
+    while (startC >= 0 && startC < COLS && !fruitWalkable(startC, tr)) {
+      startC += fromLeft ? 1 : -1;
+    }
+
     fruit = {
       i: P.fruit,
       p: f.p,
       e: f.e,
-      t: 10000, // ~9–10s arcade window
+      id: f.id,
+      t: 12000, // stays long enough to complete a tour
       gone: false,
-      x: fromLeft ? midX(0) : midX(COLS - 1),
-      y: midY(14),
+      x: midX(startC),
+      y: midY(tr),
+      // Begin slightly off-screen so it "enters" the tunnel
+      // (then first path tiles pull it into the maze)
       dir: fromLeft ? R : L,
       path,
       pathI: 0,
       fromLeft,
     };
+    // Nudge start just outside so entry is visible
+    fruit.x = fromLeft ? -TILE * 0.4 : W + TILE * 0.4;
   }
 
   function moveFruit(dt) {
     if (!fruit || fruit.gone) return;
-    let remaining = SPEED * 0.55 * (dt / 1000);
+    // Slightly slower than Ms. Pac so she can catch it
+    let remaining = SPEED * 0.48 * (dt / 1000);
     let guard = 0;
-    while (remaining > 0.0001 && guard++ < 16) {
-      if (fruit.pathI >= fruit.path.length) {
-        // Exited — despawn
+    while (remaining > 0.0001 && guard++ < 20) {
+      if (!fruit.path || fruit.pathI >= fruit.path.length) {
         fruit = null;
         return;
       }
       const wp = fruit.path[fruit.pathI];
-      const tx = midX(Math.max(0, Math.min(COLS - 1, wp.c)));
-      const ty = midY(wp.r);
-      // Allow off-board exit targets
-      const goalX = (wp.c < 0) ? -TILE : (wp.c >= COLS ? W + TILE : tx);
-      const goalY = ty;
+      let goalX, goalY;
+      if (wp.exit || wp.c < 0 || wp.c >= COLS) {
+        goalX = fruit.fromLeft ? W + TILE * 1.2 : -TILE * 1.2;
+        goalY = midY(14);
+      } else {
+        goalX = midX(wp.c);
+        goalY = midY(wp.r);
+      }
       const dx = goalX - fruit.x;
       const dy = goalY - fruit.y;
       const dist = Math.hypot(dx, dy);
-      if (dist <= 2.5) {
+      if (dist <= 2.0) {
         fruit.x = goalX;
         fruit.y = goalY;
         fruit.pathI++;
-        if (wp.c < 0 || wp.c >= COLS) {
+        if (wp.exit || wp.c < 0 || wp.c >= COLS) {
           fruit = null;
           return;
         }
@@ -1150,24 +1241,19 @@
       }
       if (Math.abs(dx) >= Math.abs(dy)) fruit.dir = dx >= 0 ? R : L;
       else fruit.dir = dy >= 0 ? D : U;
-      const step = Math.min(remaining, dist);
+      const step = Math.min(remaining, dist, TILE * 0.45);
       fruit.x += (dx / dist) * step;
       fruit.y += (dy / dist) * step;
-      if (isTunnelRow(rowOf(fruit.y))) {
-        if (fruit.x < -TILE) { fruit = null; return; }
-        if (fruit.x > W + TILE) { fruit = null; return; }
-      }
       remaining -= step;
     }
   }
 
   function checkFruit() {
-    // Arcade-style triggers (Ms. Pac-Man family uses 64/176 on some ports;
-    // Midway commonly cited near 70/170 — use 64/176 for distinct feel)
-    if (eaten === 64 && !fFlag[0]) {
+    // Two bonuses per board (classic family timing ~70 / 170 dots)
+    if (eaten === 70 && !fFlag[0]) {
       fFlag[0] = 1;
       spawnMovingFruit();
-    } else if (eaten === 176 && !fFlag[1]) {
+    } else if (eaten === 170 && !fFlag[1]) {
       fFlag[1] = 1;
       spawnMovingFruit();
     }
@@ -1505,6 +1591,138 @@
     }
   }
 
+  /** Draw arcade-style fruit sprites (not emoji) for authentic look */
+  function drawFruitSprite(id, x, y) {
+    const s = TILE * 0.42;
+    ctx.save();
+    ctx.translate(x, y);
+    if (id === "cherry") {
+      // Twin cherries + stems
+      ctx.strokeStyle = "#00aa00";
+      ctx.lineWidth = 1.6 * S;
+      ctx.beginPath();
+      ctx.moveTo(0, -s * 0.7);
+      ctx.quadraticCurveTo(-s * 0.2, -s * 0.2, -s * 0.35, s * 0.05);
+      ctx.moveTo(0, -s * 0.7);
+      ctx.quadraticCurveTo(s * 0.2, -s * 0.2, s * 0.35, s * 0.05);
+      ctx.stroke();
+      ctx.fillStyle = "#ff0000";
+      ctx.beginPath();
+      ctx.arc(-s * 0.35, s * 0.15, s * 0.32, 0, Math.PI * 2);
+      ctx.arc(s * 0.35, s * 0.15, s * 0.32, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#ff6666";
+      ctx.beginPath();
+      ctx.arc(-s * 0.45, s * 0.05, s * 0.1, 0, Math.PI * 2);
+      ctx.arc(s * 0.25, s * 0.05, s * 0.1, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (id === "strawberry") {
+      ctx.fillStyle = "#ff2040";
+      ctx.beginPath();
+      ctx.moveTo(0, s * 0.55);
+      ctx.quadraticCurveTo(s * 0.55, s * 0.1, s * 0.4, -s * 0.25);
+      ctx.quadraticCurveTo(0, -s * 0.45, -s * 0.4, -s * 0.25);
+      ctx.quadraticCurveTo(-s * 0.55, s * 0.1, 0, s * 0.55);
+      ctx.fill();
+      ctx.fillStyle = "#00cc44";
+      ctx.beginPath();
+      ctx.moveTo(0, -s * 0.35);
+      ctx.lineTo(-s * 0.28, -s * 0.55);
+      ctx.lineTo(s * 0.28, -s * 0.55);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = "#ffff88";
+      for (let i = 0; i < 5; i++) {
+        const a = -0.6 + i * 0.3;
+        ctx.fillRect(Math.sin(a) * s * 0.22 - S, Math.cos(a) * s * 0.15 - S, 2 * S, 2 * S);
+      }
+    } else if (id === "orange") {
+      ctx.fillStyle = "#ff8c00";
+      ctx.beginPath();
+      ctx.arc(0, s * 0.05, s * 0.48, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#00aa00";
+      ctx.beginPath();
+      ctx.ellipse(0, -s * 0.4, s * 0.18, s * 0.12, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#ffaa44";
+      ctx.lineWidth = 1 * S;
+      ctx.beginPath();
+      ctx.arc(0, s * 0.05, s * 0.3, 0.2, 1.2);
+      ctx.stroke();
+    } else if (id === "pretzel") {
+      // Brown twisted pretzel
+      ctx.strokeStyle = "#c47a2c";
+      ctx.lineWidth = 4.2 * S;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(-s * 0.45, s * 0.35);
+      ctx.bezierCurveTo(-s * 0.7, -s * 0.4, s * 0.1, -s * 0.7, s * 0.05, 0);
+      ctx.bezierCurveTo(0, s * 0.5, -s * 0.5, s * 0.2, -s * 0.15, -s * 0.1);
+      ctx.bezierCurveTo(s * 0.5, -s * 0.5, s * 0.7, s * 0.1, s * 0.4, s * 0.4);
+      ctx.stroke();
+      ctx.fillStyle = "#fff8dc";
+      for (const [px, py] of [[-0.2, -0.15], [0.15, -0.05], [0.0, 0.2]]) {
+        ctx.beginPath();
+        ctx.arc(px * s, py * s, 1.4 * S, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else if (id === "apple") {
+      ctx.fillStyle = "#e02020";
+      ctx.beginPath();
+      ctx.arc(-s * 0.12, s * 0.05, s * 0.4, 0, Math.PI * 2);
+      ctx.arc(s * 0.12, s * 0.05, s * 0.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#6b3a1f";
+      ctx.lineWidth = 1.8 * S;
+      ctx.beginPath();
+      ctx.moveTo(0, -s * 0.25);
+      ctx.lineTo(0, -s * 0.55);
+      ctx.stroke();
+      ctx.fillStyle = "#22cc44";
+      ctx.beginPath();
+      ctx.ellipse(s * 0.22, -s * 0.4, s * 0.18, s * 0.1, 0.5, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (id === "pear") {
+      ctx.fillStyle = "#c8e020";
+      ctx.beginPath();
+      ctx.ellipse(0, s * 0.2, s * 0.38, s * 0.42, 0, 0, Math.PI * 2);
+      ctx.ellipse(0, -s * 0.15, s * 0.26, s * 0.3, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#6b3a1f";
+      ctx.lineWidth = 1.6 * S;
+      ctx.beginPath();
+      ctx.moveTo(0, -s * 0.4);
+      ctx.lineTo(0, -s * 0.6);
+      ctx.stroke();
+      ctx.fillStyle = "#22aa33";
+      ctx.beginPath();
+      ctx.ellipse(s * 0.18, -s * 0.48, s * 0.14, s * 0.08, 0.4, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (id === "banana") {
+      ctx.strokeStyle = "#ffd000";
+      ctx.lineWidth = 5.5 * S;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(-s * 0.45, s * 0.25);
+      ctx.quadraticCurveTo(0, -s * 0.55, s * 0.5, s * 0.15);
+      ctx.stroke();
+      ctx.strokeStyle = "#c9a000";
+      ctx.lineWidth = 1.2 * S;
+      ctx.beginPath();
+      ctx.moveTo(-s * 0.35, s * 0.15);
+      ctx.quadraticCurveTo(0, -s * 0.35, s * 0.4, s * 0.05);
+      ctx.stroke();
+    } else {
+      // Fallback emoji
+      ctx.font = `${Math.round(16 * S)}px serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(fruit.e || "?", 0, 0);
+    }
+    ctx.restore();
+  }
+
   function drawFruit() {
     if (!fruit) return;
     const fx = fruit.x != null ? fruit.x : W / 2;
@@ -1517,10 +1735,7 @@
       ctx.fillText(String(fruit.p), fx, fy);
       return;
     }
-    ctx.font = `${Math.round(18 * S)}px serif`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(fruit.e, fx, fy);
+    drawFruitSprite(fruit.id || FRUIT[fruit.i]?.id, fx, fy);
   }
 
   function render() {

@@ -41,8 +41,8 @@ start index.html
 | **Ms. Pac-Man** | Pink bow, lipstick, beauty mark |
 | **Ghosts** | Blinky, Pinky, Inky, **Sue** (not Clyde) |
 | **Ghost AI** | Semi-random PRNG turns — patterns from Pac-Man fail |
-| **Bonus fruit** | Enters a tunnel, tours the maze, exits the other side |
-| **Fruit values** | Cherry 100 → Strawberry 200 → Orange 500 → Pretzel 700 → Apple 1000 → Pear 2000 → Banana 5000 |
+| **Bonus fruit** | Enters a tunnel mouth, tours corridors (not a straight side-to-side), exits the opposite tunnel |
+| **Fruit types** | Cherry 100 · Strawberry 200 · Orange 500 · Pretzel 700 · Apple 1000 · Pear 2000 · Banana 5000 (level 1→7+) |
 | **Intermissions** | After boards 2, 5, 9, 13, 17 — *They Meet*, *The Chase*, *Junior* |
 | **Touch** | Full D-pad / swipe / pause / mute |
 
