@@ -1,6 +1,6 @@
 # MS. PAC-MAN — 1982 Arcade Classic
 
-A browser recreation of Midway’s **Ms. Pac-Man**, built as a companion to [PAC-MAN](https://bamtec70.github.io/pacman-game/).
+A browser recreation of Midway’s **Ms. Pac-Man**, companion to [PAC-MAN](https://bamtec70.github.io/pacman-game/).
 
 ## Play
 
@@ -33,20 +33,20 @@ start index.html
 | **❚❚ button** | Pause / resume / start |
 | **♪ button** | Mute / unmute |
 
-## What’s different from Pac-Man
+## Arcade-faithful features
 
-- **Four rotating mazes** (pink → cyan → orange → blue) as levels progress  
-- **Ms. Pac-Man** sprite — pink bow, lipstick, beauty mark  
-- **Moving bonus fruit** that wanders in from the tunnels  
-- **Less predictable ghosts** — random turns at some intersections  
-- Ms. Pac-Man-style **fruit set** (cherries through bananas)
+| Feature | Behavior |
+|---------|----------|
+| **Four mazes** | Pink → cyan → orange → blue (levels 1–2 / 3–5 / 6–9 / 10+) |
+| **Ms. Pac-Man** | Pink bow, lipstick, beauty mark |
+| **Ghosts** | Blinky, Pinky, Inky, **Sue** (not Clyde) |
+| **Ghost AI** | Semi-random PRNG turns — patterns from Pac-Man fail |
+| **Bonus fruit** | Enters a tunnel, tours the maze, exits the other side |
+| **Fruit values** | Cherry 100 → Strawberry 200 → Orange 500 → Pretzel 700 → Apple 1000 → Pear 2000 → Banana 5000 |
+| **Intermissions** | After boards 2, 5, 9, 13, 17 — *They Meet*, *The Chase*, *Junior* |
+| **Touch** | Full D-pad / swipe / pause / mute |
 
-## Shared features
-
-- Power pellets, frightened ghosts, chain scoring  
-- Scatter / chase waves, side tunnels, lives & high score  
-- Retro beeps via Web Audio API  
-- Full **touch / mobile** controls (same style as Pac-Man)
+Also: power pellets, frightened chain scores, scatter/chase waves, side tunnels, lives, saved high score, retro sound.
 
 ## Files
 
@@ -56,4 +56,4 @@ start index.html
 
 ## Board size
 
-Internal resolution uses `TILE = 24` → **672×744** (same as the Pac-Man build).
+`TILE = 24` → **672×744** internal resolution.

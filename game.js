@@ -1,6 +1,6 @@
 /**
  * MS. PAC-MAN — 1982 Midway Arcade Classic
- * Four mazes, moving fruit, unpredictable ghosts, touch controls.
+ * Arcade-faithful: 4 mazes, Sue, semi-random ghosts, path fruit, intermissions, touch.
  */
 (() => {
   "use strict";
@@ -24,29 +24,30 @@
   const OPP = { L: R, R: L, U: D, D: U };
 
 
+
   // 0=wall 1=dot 2=empty 3=power 4=gate 5=house
-  // Four rotating mazes (Ms. Pac-Man style). Tunnel always on row 14.
-  // House / gate / nest positions match the engine (cols 11-16, rows 11-15).
+  // Four Midway-style boards. House/gate/nest fixed for engine.
+  // Arcade palette: pink → cyan → orange → blue.
   const MAZE_META = [
-    { name: "A", wall: "#ff69b4", flash: "#ffffff" }, // pink
-    { name: "B", wall: "#00ffff", flash: "#ffffff" }, // cyan
-    { name: "C", wall: "#ffb852", flash: "#ffffff" }, // orange
-    { name: "D", wall: "#2121de", flash: "#ffffff" }, // blue
+    { name: "A", wall: "#ff69b4", flash: "#ffffff", tunnels: [14] },
+    { name: "B", wall: "#00ffff", flash: "#ffffff", tunnels: [14] },
+    { name: "C", wall: "#ffb852", flash: "#ffffff", tunnels: [14] },
+    { name: "D", wall: "#2121de", flash: "#ffffff", tunnels: [14] },
   ];
 
   const MAZES = [
     [
       "0000000000000000000000000000",
       "0111111111111001111111111110",
-      "0100001000001001000001000010",
       "0300001000001001000001000030",
       "0100001000001001000001000010",
       "0111111111111111111111111110",
       "0100001001000000001001000010",
-      "0100001001000000001001000010",
-      "0111111001111001111001111110",
-      "0000001000001001000001000000",
-      "0000001000001001000001000000",
+      "0100001001111001111001000010",
+      "0111111001001001001001111110",
+      "0000001001001001001001000000",
+      "0000001001000000001001000000",
+      "0000001001111221111001000000",
       "0000001001111221111001000000",
       "0000001001000440001001000000",
       "0000001001055555501001000000",
@@ -55,16 +56,16 @@
       "0000001001000000001001000000",
       "0000001001111111111001000000",
       "0000001001000000001001000000",
-      "0000001001000000001001000000",
-      "0111111111111001111111111110",
+      "0111111111001001001111111110",
+      "0100000000001001000000000010",
+      "0300001111111221111111000030",
+      "0111001001000000001001001110",
+      "0111001111111221111111001110",
+      "0100000001001001001000000010",
+      "0100000001001001001000000010",
+      "0111111111001001001111111110",
       "0100001000001001000001000010",
       "0100001000001001000001000010",
-      "0311001111111221111111001130",
-      "0001001001000000001001001000",
-      "0001001001000000001001001000",
-      "0111111001111001111001111110",
-      "0100000000001001000000000010",
-      "0100000000001001000000000010",
       "0111111111111111111111111110",
       "0000000000000000000000000000",
     ],
@@ -78,8 +79,8 @@
       "0001001001000000001001001000",
       "0111111111111001111111111110",
       "0100000000001001000000000010",
-      "0100000000001001000000000010",
-      "0111111001111221111001111110",
+      "0100001111111221111111000010",
+      "0111001001111221111001001110",
       "0000001001111221111001000000",
       "0000001001000440001001000000",
       "0000001001055555501001000000",
@@ -95,10 +96,10 @@
       "0111111001111221111001111110",
       "0100000000001001000000000010",
       "0100000000001001000000000010",
+      "0111111111111221111111111110",
+      "0100001000001001000001000010",
+      "0100001000001001000001000010",
       "0111111111111001111111111110",
-      "0100001000001001000001000010",
-      "0100001000001001000001000010",
-      "0111111111111111111111111110",
       "0000000000000000000000000000",
     ],
     [
@@ -111,8 +112,8 @@
       "0100000001001001001000000010",
       "0111111111001001001111111110",
       "0000001000001001000001000000",
-      "0000001000001001000001000000",
-      "0111111001111221111001111110",
+      "0000001001111221111001000000",
+      "0111111001001221001001111110",
       "0000001001111221111001000000",
       "0000001001000440001001000000",
       "0000001001055555501001000000",
@@ -170,6 +171,7 @@
   ];
 
   function mazeIndexForLevel(lv) {
+    // Arcade: maze 1 (lv 1–2), maze 2 (3–5), maze 3 (6–9), maze 4 (10+)
     if (lv <= 2) return 0;
     if (lv <= 5) return 1;
     if (lv <= 9) return 2;
@@ -178,19 +180,37 @@
 
   let mazeIndex = 0;
 
+  function tunnelRows() {
+    const m = MAZE_META[mazeIndex] || MAZE_META[0];
+    return m.tunnels || [14];
+  }
+  function isTunnelRow(r) { return tunnelRows().indexOf(r) >= 0; }
+
+
 
   // Scatter corners (classic — off-map targets so ghosts hug corners)
+  // Ms. Pac-Man ghosts: Blinky, Pinky, Inky, and Sue (not Clyde)
   const SCATTER = {
     blinky: { x: 25, y: -3 },  // top-right
     pinky:  { x: 2,  y: -3 },  // top-left
     inky:   { x: 27, y: 32 },  // bottom-right
-    clyde:  { x: 0,  y: 32 },  // bottom-left
+    sue:    { x: 0,  y: 32 },  // bottom-left (Sue)
   };
 
+  // Arcade PRNG (16-bit LCG-ish) — breaks memorized Pac-Man patterns
+  let rngState = 0x2A5F;
+  function srand(seed) { rngState = (seed & 0xFFFF) || 1; }
+  function rand16() {
+    rngState = (rngState * 0x5D3 + 0x2A5F) & 0xFFFF;
+    return rngState;
+  }
+  function rand01() { return rand16() / 65536; }
+  function randInt(n) { return n <= 0 ? 0 : (rand16() * n) >> 16; }
+
+
   /**
-   * Original wave timings (ms). Ghosts reverse heading on every wave change.
-   * Level 1: 7s scatter / 20s chase ×2, then 5s / 20s, 5s, then chase forever.
-   * Higher levels: shorter scatter bursts (Namco tables, simplified).
+   * Scatter/chase wave timings (ms) — same structure as Pac-Man family.
+   * Ms. Pac-Man still reverses on mode changes; path choice is semi-random.
    */
   function modeSchedule(lv) {
     if (lv === 1) {
@@ -217,7 +237,7 @@
     ];
   }
 
-  // Ms. Pac-Man fruit values (arcade-inspired)
+  // Arcade fruit: cherry, strawberry, orange, pretzel, apple, pear, banana
   const FRUIT = [
     { e: "🍒", p: 100 }, { e: "🍓", p: 200 }, { e: "🍊", p: 500 }, { e: "🥨", p: 700 },
     { e: "🍎", p: 1000 }, { e: "🍐", p: 2000 }, { e: "🍌", p: 5000 }, { e: "🍌", p: 5000 },
@@ -268,17 +288,17 @@
     ];
     const frightMs = frightTable[Math.min(n - 1, frightTable.length - 1)];
 
-    // Dot counters before Inky / Clyde leave the house (level 1 classic)
-    let inkyDots = 30, clydeDots = 60;
-    if (n === 2) { inkyDots = 0; clydeDots = 50; }
-    else if (n >= 3) { inkyDots = 0; clydeDots = 0; }
+    // Dot counters before Inky / Sue leave the house (Ms. Pac-Man)
+    let inkyDots = 30, sueDots = 60;
+    if (n === 2) { inkyDots = 0; sueDots = 50; }
+    else if (n >= 3) { inkyDots = 0; sueDots = 0; }
 
     return {
       pac, ghost, fright, tunnel,
       elroy1, elroy2, elroySpd1, elroySpd2,
       frightMs,
       flashMs: Math.min(2000, frightMs),
-      inkyDots, clydeDots,
+      inkyDots, sueDots,
       fruit: Math.min(n - 1, 7),
       house: 0.40,   // slow bob / exit from house
       eyes: 1.35,    // eaten eyes race home (sub-stepped so they still corner)
@@ -329,9 +349,15 @@
     else if (name === "eat") { tone(500, 0.05); tone(750, 0.1, "square", 0.04, 0.05); }
     else if (name === "die") { for (let i = 0; i < 9; i++) tone(440 - i * 40, 0.07, "sawtooth", 0.035, i * 0.06); }
     else if (name === "fruit") { tone(800, 0.05); tone(1100, 0.08, "square", 0.04, 0.05); }
-    else if (name === "start") { [262, 330, 392, 523].forEach((f, i) => tone(f, 0.1, "square", 0.04, i * 0.1)); }
+    else if (name === "start") {
+      // Short Ms. Pac-Man-ish fanfare
+      [392, 494, 523, 659, 784].forEach((f, i) => tone(f, 0.09, "square", 0.035, i * 0.09));
+    }
+    else if (name === "inter") {
+      [523, 587, 659, 784, 880, 784].forEach((f, i) => tone(f, 0.1, "square", 0.03, i * 0.12));
+    }
     else if (name === "1up") { [523, 659, 784].forEach((f, i) => tone(f, 0.08, "square", 0.04, i * 0.08)); }
-    else if (name === "siren") { tone(frightT > 0 ? 210 : 140, 0.035, "triangle", 0.012); }
+    else if (name === "siren") { tone(frightT > 0 ? 240 : 160, 0.035, "triangle", 0.012); }
   }
 
   // ── State ────────────────────────────────────────────────────────────────
@@ -341,7 +367,7 @@
   let high = +localStorage.getItem("mspacman_high") || 0;
   let level = 1, lives = 3, extra = false;
   let state = "title";
-  let readyT = 0, dieT = 0, clearT = 0;
+  let readyT = 0, dieT = 0, clearT = 0, interT = 0, interAct = 0;
   let mode = "scatter", modeI = 0, modeT = 0;
   let frightT = 0, combo = 0;
   let eaten = 0;
@@ -371,7 +397,7 @@
   }
 
   function tile(c, r) {
-    if (r === 14 && (c < 0 || c >= COLS)) return EMPTY;
+    if (isTunnelRow(r) && (c < 0 || c >= COLS)) return EMPTY;
     if (c < 0 || r < 0 || c >= COLS || r >= ROWS) return WALL;
     return map[r][c];
   }
@@ -445,12 +471,12 @@
       mouth: 0, open: true,
       dead: false, dieT: 0,
     };
-    // Pinky free immediately; Inky/Clyde wait on classic dot counters
+    // Pinky free immediately; Inky/Sue wait on classic dot counters
     ghosts = [
       gh("blinky", "#ff0000", 14, 11, false, 0),
       gh("pinky",  "#ffb8ff", 14, 14, true, 0),
       gh("inky",   "#00ffff", 12, 14, true, P.inkyDots),
-      gh("clyde",  "#ffb852", 16, 14, true, P.clydeDots),
+      gh("sue",    "#ffb852", 16, 14, true, P.sueDots),
     ];
   }
 
@@ -484,6 +510,7 @@
     level = n;
     P = params(level);
     WAVES = modeSchedule(level);
+    srand((level * 0x9E37 + (score & 0xFFFF)) & 0xFFFF);
     buildMap();
     fullReset(true);
     state = "ready";
@@ -493,8 +520,21 @@
     sfx("start");
   }
 
+  function startIntermission(clearedLevel) {
+    // Acts cycle: 1 They Meet, 2 The Chase, 3 Junior
+    if (clearedLevel === 2 || clearedLevel === 13) interAct = 1;
+    else if (clearedLevel === 5 || clearedLevel === 17) interAct = 2;
+    else interAct = 3;
+    state = "intermission";
+    interT = 4200;
+    fruit = null;
+    hideOV(); // canvas plays the act (overlay would cover it)
+    sfx("inter");
+  }
+
   function beginGame() {
     unlockAudio();
+    srand((Date.now() & 0xFFFF) ^ 0xA5A5);
     score = 0; lives = 3; level = 1; extra = false; fGot = [];
     hold = null;
     beginLevel(1);
@@ -584,8 +624,8 @@
       centerOnTile(entity);
     }
 
-    // Tunnel wrap
-    if (rowOf(entity.y) === 14) {
+    // Tunnel wrap (maze-defined tunnel rows)
+    if (isTunnelRow(rowOf(entity.y))) {
       if (entity.x < -TILE * 0.5) entity.x = W + TILE * 0.5 - 1;
       if (entity.x > W + TILE * 0.5) entity.x = -TILE * 0.5 + 1;
     }
@@ -625,8 +665,7 @@
 
   function eyesWalkable(c, r) {
     if (c < 0 || r < 0 || c >= COLS || r >= ROWS) {
-      // allow tunnel wrap row only
-      if (r === 14 && (c < 0 || c >= COLS)) return true;
+      if (isTunnelRow(r) && (c < 0 || c >= COLS)) return true;
       return false;
     }
     const t = tile(c, r);
@@ -655,9 +694,8 @@
       }
       for (const d of ORDER) {
         let nc = c + d.x, nr = r + d.y;
-        // tunnel wrap for pathfinding
-        if (nr === 14 && nc < 0) nc = COLS - 1;
-        if (nr === 14 && nc >= COLS) nc = 0;
+        if (isTunnelRow(nr) && nc < 0) nc = COLS - 1;
+        if (isTunnelRow(nr) && nc >= COLS) nc = 0;
         const k = key(nc, nr);
         if (came.has(k)) continue;
         if (!eyesWalkable(nc, nr)) continue;
@@ -783,8 +821,7 @@
       g.y += (dy / dist) * step;
       budget -= step;
 
-      // Tunnel wrap while traveling
-      if (rowOf(g.y) === 14) {
+      if (isTunnelRow(rowOf(g.y))) {
         if (g.x < -TILE * 0.5) g.x = W + TILE * 0.5 - 1;
         if (g.x > W + TILE * 0.5) g.x = -TILE * 0.5 + 1;
       }
@@ -819,7 +856,7 @@
     }
 
     if (g.state === "fright") {
-      return { x: (Math.random() * COLS) | 0, y: (Math.random() * ROWS) | 0 };
+      return { x: randInt(COLS), y: randInt(ROWS) };
     }
 
     let m = mode;
@@ -839,7 +876,7 @@
       return { x: ax + (ax - bx), y: ay + (ay - by) };
     }
     const d = Math.hypot(nearestCol(g.x) - pc, nearestRow(g.y) - pr);
-    return d > 8 ? { x: pc, y: pr } : SCATTER.clyde;
+    return d > 8 ? { x: pc, y: pr } : SCATTER.sue;
   }
 
   function pickGhostDir(g) {
@@ -887,10 +924,24 @@
     }
 
     if (g.state === "fright") {
-      best = opts.length ? opts[(Math.random() * opts.length) | 0] : rev;
-    } else if (opts.length > 1 && Math.random() < 0.32) {
-      // Ms. Pac-Man: less deterministic turns at intersections
-      best = opts[(Math.random() * opts.length) | 0];
+      // Frightened: pure PRNG pick among legal exits (arcade-style)
+      best = opts.length ? opts[randInt(opts.length)] : rev;
+    } else if (opts.length > 1) {
+      // Ms. Pac-Man hallmark: semi-random pathing (patterns fail)
+      // ~45% full random among legal turns; else prefer target but
+      // randomize among the two closest options when close.
+      if (rand01() < 0.45) {
+        best = opts[randInt(opts.length)];
+      } else {
+        // rank by distance to target
+        const ranked = opts.slice().sort((a, b) => {
+          const da = (c + a.x - tgt.x) ** 2 + (r + a.y - tgt.y) ** 2;
+          const db = (c + b.x - tgt.x) ** 2 + (r + b.y - tgt.y) ** 2;
+          return da - db;
+        });
+        if (ranked.length >= 2 && rand01() < 0.35) best = ranked[1];
+        else best = ranked[0];
+      }
     }
     g.dir = best || opts[0] || rev;
   }
@@ -913,9 +964,9 @@
     // Frightened — slow blue wander
     if (g.state === "fright") return P.fright;
 
-    // Tunnel slowdown (row 14 side passages only)
+    // Tunnel slowdown (ghosts only)
     const inTunnel =
-      rowOf(g.y) === 14 && (g.x < TILE * 6 || g.x > W - TILE * 6);
+      isTunnelRow(rowOf(g.y)) && (g.x < TILE * 6 || g.x > W - TILE * 6);
     if (inTunnel) return P.tunnel;
 
     // Cruise Elroy — only Blinky, only when not frightened
@@ -967,81 +1018,156 @@
   }
 
   function fruitWalkable(c, r) {
+    if (isTunnelRow(r) && (c < 0 || c >= COLS)) return true;
     const t = tile(c, r);
     return t === EMPTY || t === DOT || t === POWER;
   }
 
+  /**
+   * Arcade fruit: enters from a side tunnel, tours corridors via BFS
+   * waypoints, then exits the opposite tunnel (never a static center fruit).
+   */
+  function fruitBfs(sc, sr, tc, tr) {
+    if (sc === tc && sr === tr) return [];
+    const key = (c, r) => c + "," + r;
+    const q = [[sc, sr]];
+    const came = new Map();
+    came.set(key(sc, sr), null);
+    let head = 0, found = false;
+    while (head < q.length) {
+      const [c, r] = q[head++];
+      if (c === tc && r === tr) { found = true; break; }
+      for (const d of ORDER) {
+        let nc = c + d.x, nr = r + d.y;
+        if (isTunnelRow(nr) && nc < 0) nc = COLS - 1;
+        if (isTunnelRow(nr) && nc >= COLS) nc = 0;
+        const k = key(nc, nr);
+        if (came.has(k)) continue;
+        if (!fruitWalkable(nc, nr)) continue;
+        came.set(k, { c, r });
+        q.push([nc, nr]);
+      }
+    }
+    if (!found) return null;
+    const rev = [];
+    let c = tc, r = tr;
+    while (!(c === sc && r === sr)) {
+      rev.push({ c, r });
+      const p = came.get(key(c, r));
+      if (!p) break;
+      c = p.c; r = p.r;
+    }
+    rev.reverse();
+    return rev;
+  }
+
+  function buildFruitPath(fromLeft) {
+    const startC = fromLeft ? 1 : COLS - 2;
+    const endC = fromLeft ? COLS - 2 : 1;
+    const tr = 14;
+    // Tour stops: upper lane → lower lane → exit (Ms. Pac bounce style)
+    const stops = [
+      { c: startC, r: tr },
+      { c: 9, r: 11 },
+      { c: 18, r: 11 },
+      { c: 18, r: 17 },
+      { c: 9, r: 17 },
+      { c: 9, r: 23 },
+      { c: 18, r: 23 },
+      { c: endC, r: tr },
+    ];
+    // Keep only walkable stops
+    const pts = stops.filter((p) => fruitWalkable(p.c, p.r));
+    if (pts.length < 2) {
+      return [
+        { c: startC, r: tr },
+        { c: endC, r: tr },
+        { c: fromLeft ? COLS : -1, r: tr },
+      ];
+    }
+    const path = [];
+    for (let i = 0; i < pts.length - 1; i++) {
+      const a = pts[i], b = pts[i + 1];
+      const seg = fruitBfs(a.c, a.r, b.c, b.r);
+      if (seg) {
+        for (const p of seg) path.push(p);
+      } else {
+        path.push(b);
+      }
+    }
+    // Exit off the far side of the tunnel
+    path.push({ c: fromLeft ? COLS : -1, r: tr });
+    return path;
+  }
+
   function spawnMovingFruit() {
     const f = FRUIT[P.fruit];
-    const fromLeft = Math.random() < 0.5;
+    const fromLeft = rand01() < 0.5;
+    const path = buildFruitPath(fromLeft);
     fruit = {
       i: P.fruit,
       p: f.p,
       e: f.e,
-      t: 14000,
+      t: 10000, // ~9–10s arcade window
       gone: false,
       x: fromLeft ? midX(0) : midX(COLS - 1),
       y: midY(14),
       dir: fromLeft ? R : L,
+      path,
+      pathI: 0,
+      fromLeft,
     };
-  }
-
-  function pickFruitDir(fr) {
-    const c = nearestCol(fr.x), r = nearestRow(fr.y);
-    const rev = OPP[fr.dir.id];
-    const opts = [];
-    for (const d of ORDER) {
-      if (d.id === rev.id) continue;
-      let nc = c + d.x, nr = r + d.y;
-      if (nr === 14 && nc < 0) nc = COLS - 1;
-      if (nr === 14 && nc >= COLS) nc = 0;
-      if (fruitWalkable(nc, nr)) opts.push(d);
-    }
-    if (!opts.length) {
-      fr.dir = rev;
-      return;
-    }
-    if (fruitWalkable(c + fr.dir.x, r + fr.dir.y) && Math.random() < 0.55) return;
-    fr.dir = opts[(Math.random() * opts.length) | 0];
   }
 
   function moveFruit(dt) {
     if (!fruit || fruit.gone) return;
-    let remaining = SPEED * 0.52 * (dt / 1000);
+    let remaining = SPEED * 0.55 * (dt / 1000);
     let guard = 0;
-    while (remaining > 0.0001 && guard++ < 10) {
-      const step = Math.min(remaining, TILE * 0.35);
-      const alignedF =
-        Math.abs(fruit.x - midX(nearestCol(fruit.x))) <= ALIGN &&
-        Math.abs(fruit.y - midY(nearestRow(fruit.y))) <= ALIGN;
-      if (alignedF) {
-        fruit.x = midX(nearestCol(fruit.x));
-        fruit.y = midY(nearestRow(fruit.y));
-        pickFruitDir(fruit);
-        const c = nearestCol(fruit.x), r = nearestRow(fruit.y);
-        if (!fruitWalkable(c + fruit.dir.x, r + fruit.dir.y)) {
-          for (const d of ORDER) {
-            if (fruitWalkable(c + d.x, r + d.y)) { fruit.dir = d; break; }
-          }
-        }
+    while (remaining > 0.0001 && guard++ < 16) {
+      if (fruit.pathI >= fruit.path.length) {
+        // Exited — despawn
+        fruit = null;
+        return;
       }
-      fruit.x += fruit.dir.x * step;
-      fruit.y += fruit.dir.y * step;
-      if (fruit.dir.x !== 0) fruit.y = midY(nearestRow(fruit.y));
-      else fruit.x = midX(nearestCol(fruit.x));
-      if (rowOf(fruit.y) === 14) {
-        if (fruit.x < -TILE * 0.5) fruit.x = W + TILE * 0.5 - 1;
-        if (fruit.x > W + TILE * 0.5) fruit.x = -TILE * 0.5 + 1;
+      const wp = fruit.path[fruit.pathI];
+      const tx = midX(Math.max(0, Math.min(COLS - 1, wp.c)));
+      const ty = midY(wp.r);
+      // Allow off-board exit targets
+      const goalX = (wp.c < 0) ? -TILE : (wp.c >= COLS ? W + TILE : tx);
+      const goalY = ty;
+      const dx = goalX - fruit.x;
+      const dy = goalY - fruit.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist <= 2.5) {
+        fruit.x = goalX;
+        fruit.y = goalY;
+        fruit.pathI++;
+        if (wp.c < 0 || wp.c >= COLS) {
+          fruit = null;
+          return;
+        }
+        continue;
+      }
+      if (Math.abs(dx) >= Math.abs(dy)) fruit.dir = dx >= 0 ? R : L;
+      else fruit.dir = dy >= 0 ? D : U;
+      const step = Math.min(remaining, dist);
+      fruit.x += (dx / dist) * step;
+      fruit.y += (dy / dist) * step;
+      if (isTunnelRow(rowOf(fruit.y))) {
+        if (fruit.x < -TILE) { fruit = null; return; }
+        if (fruit.x > W + TILE) { fruit = null; return; }
       }
       remaining -= step;
     }
   }
 
   function checkFruit() {
-    if (eaten === 70 && !fFlag[0]) {
+    // Arcade-style triggers (Ms. Pac-Man family uses 64/176 on some ports;
+    // Midway commonly cited near 70/170 — use 64/176 for distinct feel)
+    if (eaten === 64 && !fFlag[0]) {
       fFlag[0] = 1;
       spawnMovingFruit();
-    } else if (eaten === 170 && !fFlag[1]) {
+    } else if (eaten === 176 && !fFlag[1]) {
       fFlag[1] = 1;
       spawnMovingFruit();
     }
@@ -1102,7 +1228,23 @@
 
     if (state === "clear") {
       clearT -= dt;
-      if (clearT <= 0) beginLevel(level + 1);
+      if (clearT <= 0) {
+        // Midway intermissions between boards
+        const next = level + 1;
+        if (level === 2 || level === 5 || level === 9 || level === 13 || level === 17) {
+          startIntermission(level);
+        } else {
+          beginLevel(next);
+        }
+      }
+      return;
+    }
+
+    if (state === "intermission") {
+      interT -= dt;
+      if (interT <= 0) {
+        beginLevel(level + 1);
+      }
       return;
     }
 
@@ -1382,6 +1524,10 @@
   }
 
   function render() {
+    if (state === "intermission") {
+      drawIntermission();
+      return;
+    }
     drawMaze();
     drawDots();
     if (state !== "clear") drawFruit();
@@ -1394,6 +1540,73 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText("READY!", W / 2, midY(17));
+    }
+  }
+
+  /** Simple Midway-style intermission acts */
+  function drawIntermission() {
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0, 0, W, H);
+    const t = 1 - Math.max(0, interT) / 4200;
+    const y = H * 0.48;
+    // Stage floor
+    ctx.strokeStyle = "#ff69b4";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(40, y + 40);
+    ctx.lineTo(W - 40, y + 40);
+    ctx.stroke();
+
+    // Ms. Pac runs across; ghost chases on act 2; baby on act 3
+    const msX = 60 + t * (W - 120);
+    const ghostX = msX - 70;
+    // Ms Pac
+    ctx.fillStyle = "#ffff00";
+    ctx.beginPath();
+    ctx.arc(msX, y, 16, 0.3, Math.PI * 2 - 0.3);
+    ctx.lineTo(msX, y);
+    ctx.fill();
+    ctx.fillStyle = "#ff69b4";
+    ctx.beginPath();
+    ctx.arc(msX + 4, y - 14, 5, 0, Math.PI * 2);
+    ctx.arc(msX - 6, y - 12, 5, 0, Math.PI * 2);
+    ctx.fill();
+
+    if (interAct === 1) {
+      // Pac-Man approaches from left, they meet center
+      const px = 40 + t * (W * 0.42);
+      ctx.fillStyle = "#ffff00";
+      ctx.beginPath();
+      ctx.arc(px, y, 16, 0.3, Math.PI * 2 - 0.3);
+      ctx.lineTo(px, y);
+      ctx.fill();
+      ctx.fillStyle = "#ffb8ff";
+      ctx.font = `${Math.round(10 * S)}px 'Press Start 2P', monospace`;
+      ctx.textAlign = "center";
+      ctx.fillText("THEY MEET", W / 2, y - 60);
+    } else if (interAct === 2) {
+      ctx.fillStyle = "#ff0000";
+      ctx.beginPath();
+      ctx.arc(ghostX, y, 15, Math.PI, 0);
+      ctx.lineTo(ghostX + 15, y + 14);
+      ctx.lineTo(ghostX - 15, y + 14);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = "#00ffff";
+      ctx.font = `${Math.round(10 * S)}px 'Press Start 2P', monospace`;
+      ctx.textAlign = "center";
+      ctx.fillText("THE CHASE", W / 2, y - 60);
+    } else {
+      // Junior
+      ctx.fillStyle = "#ffff00";
+      ctx.beginPath();
+      ctx.arc(msX - 28, y + 6, 9, 0.3, Math.PI * 2 - 0.3);
+      ctx.lineTo(msX - 28, y + 6);
+      ctx.fill();
+      ctx.fillStyle = "#ffb852";
+      ctx.font = `${Math.round(10 * S)}px 'Press Start 2P', monospace`;
+      ctx.textAlign = "center";
+      ctx.fillText("JUNIOR", W / 2, y - 60);
     }
   }
 
@@ -1448,6 +1661,7 @@
   function togglePauseOrStart() {
     unlockAudio();
     if (state === "title" || state === "over") beginGame();
+    else if (state === "intermission") { interT = 0; } // skip act
     else if (state === "play") {
       state = "pause";
       showOV("PAUSED", resumeHint(), "paused");
@@ -1511,6 +1725,7 @@
     swipe = { x: e.clientX, y: e.clientY, moved: false, id: e.pointerId };
     unlockAudio();
     if (state === "title" || state === "over") beginGame();
+    else if (state === "intermission") { interT = 0; }
     else if (state === "pause") { state = "play"; hideOV(); }
   }, { passive: false });
 
