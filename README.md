@@ -4,7 +4,7 @@ A browser recreation of Midway’s **Ms. Pac-Man**, built as a companion to [PAC
 
 ## Play
 
-**Live:** after GitHub Pages is enabled — `https://bamtec70.github.io/ms-pacman-game/`
+**Live:** https://bamtec70.github.io/ms-pacman-game/
 
 Or open `index.html` locally:
 
