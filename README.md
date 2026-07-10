@@ -37,7 +37,7 @@ start index.html
 
 | Feature | Behavior |
 |---------|----------|
-| **Four mazes** | Pink → cyan → orange → blue (levels 1–2 / 3–5 / 6–9 / 10+) |
+| **Four mazes** | **Pink** (lv 1–2) → **Cyan dual-tunnel** (3–5) → **Orange** (6–9) → **Dark blue** (10+); wall color + layout change each board |
 | **Ms. Pac-Man** | Pink bow, lipstick, beauty mark |
 | **Ghosts** | Blinky, Pinky, Inky, **Sue** (not Clyde) |
 | **Ghost AI** | Semi-random PRNG turns — patterns from Pac-Man fail |

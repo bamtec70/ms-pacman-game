@@ -25,14 +25,15 @@
 
 
 
+
   // 0=wall 1=dot 2=empty 3=power 4=gate 5=house
-  // Four Midway-style boards. House/gate/nest fixed for engine.
-  // Arcade palette: pink → cyan → orange → blue.
+  // Four Midway Ms. Pac-Man boards — unique pattern + arcade wall color each.
+  // Level map: 1–2 pink, 3–5 cyan (dual tunnels), 6–9 orange, 10+ blue.
   const MAZE_META = [
-    { name: "A", wall: "#ff69b4", flash: "#ffffff", tunnels: [14] },
-    { name: "B", wall: "#00ffff", flash: "#ffffff", tunnels: [14] },
-    { name: "C", wall: "#ffb852", flash: "#ffffff", tunnels: [14] },
-    { name: "D", wall: "#2121de", flash: "#ffffff", tunnels: [14] },
+    { name: "1-PINK", wall: "#ff9ecd", inner: "#ff69b4", flash: "#ffffff", tunnels: [14], dot: "#ffb8ff" },
+    { name: "2-CYAN", wall: "#7fffff", inner: "#00e8e8", flash: "#ffffff", tunnels: [8, 22], dot: "#b8ffff" },
+    { name: "3-ORANGE", wall: "#ffc878", inner: "#ff9a2e", flash: "#ffffff", tunnels: [14], dot: "#ffe0b0" },
+    { name: "4-BLUE", wall: "#5a5aff", inner: "#2121de", flash: "#ffffff", tunnels: [14], dot: "#b8b8ff" }
   ];
 
   const MAZES = [
@@ -78,13 +79,13 @@
       "0001001001000000001001001000",
       "0001001001000000001001001000",
       "0111111111111001111111111110",
-      "0100000000001001000000000010",
-      "0100001111111221111111000010",
+      "2222220000001001000000222222",
+      "0000001111111221111111000000",
       "0111001001111221111001001110",
       "0000001001111221111001000000",
       "0000001001000440001001000000",
       "0000001001055555501001000000",
-      "2222221111055555501111222222",
+      "0000001111055555501111000000",
       "0000001001055555501001000000",
       "0000001001000000001001000000",
       "0111111001111111111001111110",
@@ -92,7 +93,7 @@
       "0100001000001001000001000010",
       "0311111111111001111111111130",
       "0001001001000000001001001000",
-      "0001001001000000001001001000",
+      "2222221001000000001001222222",
       "0111111001111221111001111110",
       "0100000000001001000000000010",
       "0100000000001001000000000010",
@@ -171,20 +172,34 @@
   ];
 
   function mazeIndexForLevel(lv) {
-    // Arcade: maze 1 (lv 1–2), maze 2 (3–5), maze 3 (6–9), maze 4 (10+)
-    if (lv <= 2) return 0;
-    if (lv <= 5) return 1;
-    if (lv <= 9) return 2;
-    return 3;
+    // Exact Midway board schedule
+    if (lv <= 2) return 0;  // pink
+    if (lv <= 5) return 1;  // light blue / cyan (dual tunnels)
+    if (lv <= 9) return 2;  // orange
+    return 3;               // dark blue
   }
 
   let mazeIndex = 0;
+  let lastDrawnMaze = -1;
 
   function tunnelRows() {
     const m = MAZE_META[mazeIndex] || MAZE_META[0];
     return m.tunnels || [14];
   }
   function isTunnelRow(r) { return tunnelRows().indexOf(r) >= 0; }
+
+  /** Apply board chrome (border / glow) when maze changes */
+  function applyMazeTheme() {
+    const meta = MAZE_META[mazeIndex] || MAZE_META[0];
+    const wrap = document.getElementById("canvas-wrap");
+    if (wrap) {
+      wrap.style.borderColor = meta.wall;
+      wrap.style.boxShadow = "0 0 40px " + meta.inner + "66";
+    }
+    document.documentElement.style.setProperty("--maze-wall", meta.wall);
+    document.documentElement.style.setProperty("--maze-inner", meta.inner);
+  }
+
 
 
 
@@ -400,6 +415,7 @@
     for (let y = 0; y < ROWS; y++)
       for (let x = 0; x < COLS; x++)
         if (map[y][x] === DOT || map[y][x] === POWER) dots++;
+    applyMazeTheme();
   }
 
   function tile(c, r) {
@@ -517,12 +533,18 @@
     P = params(level);
     WAVES = modeSchedule(level);
     srand((level * 0x9E37 + (score & 0xFFFF)) & 0xFFFF);
-    buildMap();
+    buildMap(); // sets mazeIndex + wall color/pattern for this level
     fullReset(true);
     state = "ready";
-    readyT = 2000;
+    readyT = 2200;
     hud();
-    showOV("READY!", "", "ready");
+    // Flash the new board identity so maze changes are obvious
+    const boardNames = ["PINK MAZE", "BLUE MAZE", "ORANGE MAZE", "DARK BLUE MAZE"];
+    showOV("READY!", boardNames[mazeIndex] || "", null);
+    // Brief title of the maze, then classic READY on canvas
+    setTimeout(() => {
+      if (state === "ready") showOV("READY!", "", "ready");
+    }, 700);
     sfx("start");
   }
 
@@ -1398,14 +1420,19 @@
 
     const flash = state === "clear" && ((time / 200) | 0) % 2 === 0;
     const meta = MAZE_META[mazeIndex] || MAZE_META[0];
-    ctx.strokeStyle = flash ? meta.flash : meta.wall;
-    ctx.lineWidth = 2 * S;
+    const wallCol = flash ? meta.flash : meta.wall;
+    const innerCol = flash ? "#ffffff" : (meta.inner || meta.wall);
+
+    // Outer wall outline (bright arcade color for this board)
+    ctx.strokeStyle = wallCol;
+    ctx.lineWidth = 2.4 * S;
     ctx.lineCap = "square";
+    ctx.lineJoin = "miter";
 
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
         if (map[r][c] !== WALL) continue;
-        const x = c * TILE, y = r * TILE, i = 3.2 * S;
+        const x = c * TILE, y = r * TILE, i = 3.0 * S;
         const up = r > 0 && map[r - 1][c] === WALL;
         const dn = r < ROWS - 1 && map[r + 1][c] === WALL;
         const lf = c > 0 && map[r][c - 1] === WALL;
@@ -1417,25 +1444,63 @@
       }
     }
 
-    // pink gate
+    // Inner parallel line (deeper hue) — classic double-wall look
+    ctx.strokeStyle = innerCol;
+    ctx.lineWidth = 1.2 * S;
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        if (map[r][c] !== WALL) continue;
+        const x = c * TILE, y = r * TILE, i = 5.4 * S;
+        const up = r > 0 && map[r - 1][c] === WALL;
+        const dn = r < ROWS - 1 && map[r + 1][c] === WALL;
+        const lf = c > 0 && map[r][c - 1] === WALL;
+        const rt = c < COLS - 1 && map[r][c + 1] === WALL;
+        // Only draw inner edge when this face is an outer face of a thick wall block
+        if (!up) { ctx.beginPath(); ctx.moveTo(x + i, y + i); ctx.lineTo(x + TILE - i, y + i); ctx.stroke(); }
+        if (!dn) { ctx.beginPath(); ctx.moveTo(x + i, y + TILE - i); ctx.lineTo(x + TILE - i, y + TILE - i); ctx.stroke(); }
+        if (!lf) { ctx.beginPath(); ctx.moveTo(x + i, y + i); ctx.lineTo(x + i, y + TILE - i); ctx.stroke(); }
+        if (!rt) { ctx.beginPath(); ctx.moveTo(x + TILE - i, y + i); ctx.lineTo(x + TILE - i, y + TILE - i); ctx.stroke(); }
+      }
+    }
+
+    // Ghost-house door (always pink like the arcade)
     for (let r = 0; r < ROWS; r++)
       for (let c = 0; c < COLS; c++)
         if (map[r][c] === GATE) {
           ctx.fillStyle = "#ffb8ff";
           ctx.fillRect(c * TILE + 3 * S, r * TILE + TILE / 2 - S, TILE - 6 * S, 2 * S);
         }
+
+    // Soft color wash in empty wall blocks so boards read as different colors
+    if (!flash) {
+      ctx.fillStyle = innerCol + "18";
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          if (map[r][c] !== WALL) continue;
+          const up = r > 0 && map[r - 1][c] === WALL;
+          const dn = r < ROWS - 1 && map[r + 1][c] === WALL;
+          const lf = c > 0 && map[r][c - 1] === WALL;
+          const rt = c < COLS - 1 && map[r][c + 1] === WALL;
+          if (up && dn && lf && rt) {
+            ctx.fillRect(c * TILE + 4 * S, r * TILE + 4 * S, TILE - 8 * S, TILE - 8 * S);
+          }
+        }
+      }
+    }
   }
 
   function drawDots() {
+    const meta = MAZE_META[mazeIndex] || MAZE_META[0];
+    const dotCol = meta.dot || "#ffb897";
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
         const v = map[r][c];
         const x = midX(c), y = midY(r);
         if (v === DOT) {
-          ctx.fillStyle = "#ffb897";
+          ctx.fillStyle = dotCol;
           ctx.fillRect(x - 1.6 * S, y - 1.6 * S, 3.2 * S, 3.2 * S);
         } else if (v === POWER && ((time / 180) | 0) % 2 === 0) {
-          ctx.fillStyle = "#ffb897";
+          ctx.fillStyle = dotCol;
           ctx.beginPath();
           ctx.arc(x, y, 6 * S, 0, Math.PI * 2);
           ctx.fill();

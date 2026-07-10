@@ -63,10 +63,11 @@ html, body {
 #canvas-wrap {
   position: relative;
   line-height: 0;
-  box-shadow: 0 0 40px rgba(255, 105, 180, 0.28);
-  border: 2px solid #ff69b4;
+  box-shadow: 0 0 40px color-mix(in srgb, var(--maze-inner, #ff69b4) 40%, transparent);
+  border: 2px solid var(--maze-wall, #ff69b4);
   flex-shrink: 1;
   max-width: min(100vw - 16px, var(--board-w, 672px));
+  transition: border-color 0.35s ease, box-shadow 0.35s ease;
 }
 
 #game {
