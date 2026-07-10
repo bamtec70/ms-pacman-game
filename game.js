@@ -348,40 +348,117 @@
   const $hint = document.getElementById("overlay-hint");
   const $ctrl = document.getElementById("overlay-controls");
 
-  // ── Audio ────────────────────────────────────────────────────────────────
-  let audio = null, muted = false, chompN = 0;
+  // ── Audio (Midway Ms. Pac-Man style synthesis) ───────────────────────────
+  let audio = null, muted = false, chompN = 0, noiseBuf = null;
   function unlockAudio() {
     if (!audio) audio = new (window.AudioContext || window.webkitAudioContext)();
     if (audio.state === "suspended") audio.resume();
+    if (!noiseBuf && audio) {
+      const n = audio.sampleRate * 0.2 | 0;
+      noiseBuf = audio.createBuffer(1, n, audio.sampleRate);
+      const d = noiseBuf.getChannelData(0);
+      for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+    }
   }
-  function tone(freq, dur, type = "square", vol = 0.04, when = 0) {
+  function tone(freq, dur, type = "square", vol = 0.04, when = 0, slideTo) {
     if (muted || !audio) return;
     const t = audio.currentTime + when;
     const o = audio.createOscillator();
     const g = audio.createGain();
     o.type = type;
-    o.frequency.value = freq;
-    g.gain.setValueAtTime(vol, t);
+    o.frequency.setValueAtTime(freq, t);
+    if (slideTo != null) o.frequency.exponentialRampToValueAtTime(Math.max(20, slideTo), t + dur);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.008);
     g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
     o.connect(g); g.connect(audio.destination);
-    o.start(t); o.stop(t + dur + 0.02);
+    o.start(t); o.stop(t + dur + 0.03);
+  }
+  function noise(dur, vol = 0.03, when = 0, filterFreq = 1200) {
+    if (muted || !audio || !noiseBuf) return;
+    const t = audio.currentTime + when;
+    const src = audio.createBufferSource();
+    src.buffer = noiseBuf;
+    const f = audio.createBiquadFilter();
+    f.type = "bandpass";
+    f.frequency.value = filterFreq;
+    const g = audio.createGain();
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    src.connect(f); f.connect(g); g.connect(audio.destination);
+    src.start(t); src.stop(t + dur + 0.02);
+  }
+  function seq(notes, type = "square", vol = 0.04) {
+    let t = 0;
+    for (const n of notes) {
+      const [f, d, gap = 0] = n;
+      if (f > 0) tone(f, d, type, vol, t);
+      t += d + gap;
+    }
   }
   function sfx(name) {
     unlockAudio();
-    if (name === "chomp") { tone(140 + (chompN++ % 2) * 50, 0.03, "square", 0.025); }
-    else if (name === "power") { tone(220, 0.06); tone(340, 0.06, "square", 0.04, 0.06); tone(460, 0.1, "square", 0.04, 0.12); }
-    else if (name === "eat") { tone(500, 0.05); tone(750, 0.1, "square", 0.04, 0.05); }
-    else if (name === "die") { for (let i = 0; i < 9; i++) tone(440 - i * 40, 0.07, "sawtooth", 0.035, i * 0.06); }
-    else if (name === "fruit") { tone(800, 0.05); tone(1100, 0.08, "square", 0.04, 0.05); }
-    else if (name === "start") {
-      // Short Ms. Pac-Man-ish fanfare
-      [392, 494, 523, 659, 784].forEach((f, i) => tone(f, 0.09, "square", 0.035, i * 0.09));
+    if (muted || !audio) return;
+
+    if (name === "chomp") {
+      // Slightly brighter waka than Pac-Man
+      const a = 185, b = 233;
+      const f = (chompN++ % 2 === 0) ? a : b;
+      tone(f, 0.05, "square", 0.028);
+      tone(f * 2, 0.03, "triangle", 0.01);
+    } else if (name === "power") {
+      tone(220, 0.06, "square", 0.04);
+      tone(277, 0.06, "square", 0.04, 0.06);
+      tone(370, 0.12, "square", 0.045, 0.12);
+      tone(185, 0.1, "triangle", 0.02, 0.04);
+    } else if (name === "eat") {
+      tone(440, 0.05, "square", 0.04, 0, 700);
+      tone(700, 0.07, "square", 0.035, 0.05, 1050);
+      tone(1050, 0.1, "triangle", 0.025, 0.1);
+    } else if (name === "die") {
+      // Ms. Pac death — similar fall, slightly softer steps
+      const base = [587, 554, 523, 494, 466, 440, 415, 392, 370, 349, 330, 311, 294, 277, 262];
+      base.forEach((f, i) => {
+        tone(f, 0.05, "square", 0.03, i * 0.052);
+        tone(f * 0.5, 0.04, "triangle", 0.012, i * 0.052);
+      });
+      noise(0.12, 0.018, 0.75, 500);
+    } else if (name === "fruit") {
+      // Moving fruit pickup — cheerful chime
+      tone(784, 0.05, "square", 0.035);
+      tone(988, 0.07, "square", 0.04, 0.05);
+      tone(1319, 0.08, "triangle", 0.025, 0.1);
+    } else if (name === "start") {
+      // Ms. Pac-Man style opening (bouncier Midway fanfare)
+      seq([
+        [392, 0.08, 0.02], [494, 0.08, 0.02], [587, 0.08, 0.02], [784, 0.12, 0.04],
+        [740, 0.07, 0.01], [784, 0.07, 0.01], [880, 0.07, 0.01], [988, 0.14, 0.05],
+        [784, 0.08, 0.02], [659, 0.08, 0.02], [587, 0.08, 0.02], [523, 0.16, 0],
+      ], "square", 0.036);
+    } else if (name === "inter") {
+      // Intermission act sting
+      seq([
+        [523, 0.1, 0.02], [587, 0.1, 0.02], [659, 0.1, 0.02],
+        [784, 0.12, 0.03], [880, 0.1, 0.02], [784, 0.1, 0.02],
+        [698, 0.1, 0.02], [659, 0.18, 0],
+      ], "square", 0.032);
+    } else if (name === "1up") {
+      seq([
+        [523, 0.07, 0.01], [659, 0.07, 0.01], [784, 0.07, 0.01], [1047, 0.14, 0],
+      ], "square", 0.04);
+    } else if (name === "siren") {
+      if (frightT > 0) {
+        const f = 200 + (frightT % 180) * 0.5;
+        tone(f, 0.09, "triangle", 0.015, 0, f * 1.2);
+        tone(f * 0.66, 0.08, "square", 0.007);
+      } else {
+        const remain = typeof dots === "number" ? dots : 200;
+        const t01 = 1 - Math.min(1, Math.max(0, remain / 300));
+        const f0 = 130 + t01 * 110;
+        tone(f0, 0.1, "triangle", 0.013, 0, f0 * 1.1);
+        tone(f0 * 1.33, 0.08, "square", 0.005);
+      }
     }
-    else if (name === "inter") {
-      [523, 587, 659, 784, 880, 784].forEach((f, i) => tone(f, 0.1, "square", 0.03, i * 0.12));
-    }
-    else if (name === "1up") { [523, 659, 784].forEach((f, i) => tone(f, 0.08, "square", 0.04, i * 0.08)); }
-    else if (name === "siren") { tone(frightT > 0 ? 240 : 160, 0.035, "triangle", 0.012); }
   }
 
   // ── State ────────────────────────────────────────────────────────────────
