@@ -1,0 +1,9 @@
+ref-arcade/
+*.avi
+*.zip
+roms/
+mame/
+*.rom
+_scan.py
+_patch_*.py
+_patch_*.js
