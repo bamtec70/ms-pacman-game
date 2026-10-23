@@ -9,54 +9,43 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>MS. PAC-MAN — 1982 Arcade (BUILD V3)</title>
-  <!-- New filenames force browsers past stale caches -->
-  <link rel="stylesheet" href="mspacman-v3.css?v=mspac-orient1" />
+  <title>MS. PAC-MAN - 1982 Arcade (BUILD V4)</title>
+  <link rel="stylesheet" href="mspacman-v4.css?v=4" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
 </head>
 <body>
   <div id="game-wrapper">
-    <header id="hud">
-      <div class="hud-block">
-        <div class="label">1UP</div>
-        <div id="score">00</div>
-      </div>
-      <div class="hud-block">
-        <div class="label">HIGH SCORE</div>
-        <div id="high-score">00</div>
-      </div>
-      <div class="hud-block">
-        <div class="label">LEVEL</div>
-        <div id="level">1</div>
-      </div>
-    </header>
-
-    <div id="canvas-wrap">
-      <canvas id="game" width="672" height="744"></canvas>
-      <div id="overlay">
-        <div id="overlay-title">MS. PAC-MAN</div>
-        <div id="overlay-sub">INSERT COIN</div>
-        <div id="overlay-hint">BUILD V3 — PRESS SPACE OR TAP TO START</div>
-        <div id="overlay-controls">
-          ARROWS / WASD / SWIPE / D-PAD — MOVE<br />
-          SPACE OR PAUSE — START / PAUSE<br />
-          M OR MUTE — SOUND — MUST SEE BUILD V3
+    <div id="stage-box">
+      <div id="stage">
+        <header id="hud">
+          <div class="hud-block"><div class="label">1UP</div><div id="score">00</div></div>
+          <div class="hud-block"><div class="label">HIGH SCORE</div><div id="high-score">00</div></div>
+          <div class="hud-block"><div class="label">LEVEL</div><div id="level">1</div></div>
+        </header>
+        <div id="canvas-wrap">
+          <canvas id="game" width="672" height="744"></canvas>
+          <div id="overlay">
+            <div id="overlay-title">MS. PAC-MAN</div>
+            <div id="overlay-sub">INSERT COIN</div>
+            <div id="overlay-hint">BUILD V4 - PRESS SPACE OR TAP TO START</div>
+            <div id="overlay-controls">
+              ARROWS / WASD / SWIPE / D-PAD - MOVE<br />
+              SPACE OR PAUSE - START / PAUSE<br />
+              M OR MUTE - SOUND
+            </div>
+          </div>
         </div>
+        <footer id="footer">
+          <div id="lives"></div>
+          <div id="build-tag">BUILD V4</div>
+          <div id="fruit-tray"></div>
+        </footer>
       </div>
     </div>
 
-    <footer id="footer">
-      <div id="lives"></div>
-      <div id="fruit-tray"></div>
-    </footer>
-
     <div id="mobile-controls" aria-label="Touch controls">
-      <div class="mobile-side">
-        <button type="button" id="btn-pause" class="mobile-btn" aria-label="Pause">❚❚</button>
-        <button type="button" id="btn-mute" class="mobile-btn" aria-label="Mute">♪</button>
-      </div>
       <div id="dpad" role="group" aria-label="Direction pad">
         <button type="button" class="dpad-btn" data-dir="U" aria-label="Up">▲</button>
         <button type="button" class="dpad-btn" data-dir="L" aria-label="Left">◀</button>
@@ -64,9 +53,12 @@
         <button type="button" class="dpad-btn" data-dir="R" aria-label="Right">▶</button>
         <button type="button" class="dpad-btn" data-dir="D" aria-label="Down">▼</button>
       </div>
+      <div class="mobile-side">
+        <button type="button" id="btn-pause" class="mobile-btn" aria-label="Pause">❚❚</button>
+        <button type="button" id="btn-mute" class="mobile-btn" aria-label="Mute">♪</button>
+      </div>
     </div>
   </div>
-
-  <script src="mspacman-v3.js"></script>
+  <script src="mspacman-v4.js?v=4"></script>
 </body>
 </html>
