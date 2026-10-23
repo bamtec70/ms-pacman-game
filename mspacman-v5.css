@@ -1,0 +1,60 @@
+/* MS. PAC-MAN BUILD V5 - one logical stage (680x852) uniformly scaled by JS */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  width: 100%; height: 100%; background: #000; color: #fff; overflow: hidden;
+  font-family: "Press Start 2P", "Courier New", monospace;
+  user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent; touch-action: none; overscroll-behavior: none;
+}
+#game-wrapper { position: fixed; inset: 0; overflow: hidden; }
+#stage-box { position: absolute; left: 0; top: 0; overflow: hidden; }
+#stage {
+  position: absolute; left: 0; top: 0; width: 680px; height: 852px;
+  transform-origin: 0 0; display: flex; flex-direction: column;
+}
+#hud { height: 56px; display: flex; justify-content: space-between; align-items: flex-start; padding: 6px 16px 0; }
+.hud-block { text-align: center; min-width: 100px; }
+.hud-block .label { font-size: 16px; margin-bottom: 8px; letter-spacing: 1px; }
+#score, #high-score, #level { font-size: 18px; min-height: 18px; }
+#canvas-wrap { position: relative; width: 680px; height: 752px; border: 4px solid #FF0000; line-height: 0;
+  box-shadow: 0 0 40px rgba(33, 33, 222, 0.35); }
+#game { display: block; width: 672px; height: 744px; background: #000; image-rendering: pixelated; touch-action: none; }
+#footer { height: 44px; display: flex; justify-content: space-between; align-items: center; padding: 0 10px; }
+#build-tag { font-size: 10px; color: #555; }
+#lives, #fruit-tray { display: flex; gap: 8px; align-items: center; min-width: 120px; }
+#fruit-tray { justify-content: flex-end; }
+.life-icon, .fruit-icon { width: 28px; height: 28px; display: block; image-rendering: pixelated; }
+#overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.72); text-align: center; gap: 22px; padding: 24px; line-height: 1.7; }
+#overlay.hidden { display: none; }
+#overlay-title { color: #ff0; font-size: 40px; letter-spacing: 6px; text-shadow: 0 0 14px #ff0; }
+#overlay-sub { color: #ffb8ff; font-size: 20px; animation: blink 0.8s steps(1) infinite; }
+#overlay-hint { color: #fff; font-size: 14px; }
+#overlay-controls { color: #0ff; font-size: 12px; line-height: 2; opacity: 0.9; }
+#overlay.ready { background: transparent; }
+#overlay.ready #overlay-title { font-size: 0; text-shadow: none; } /* READY! drawn in canvas */
+#overlay.ready #overlay-sub, #overlay.ready #overlay-hint, #overlay.ready #overlay-controls { display: none; }
+#overlay.paused #overlay-title { color: #fff; font-size: 32px; }
+#overlay.gameover #overlay-title { color: #f00; font-size: 36px; text-shadow: 0 0 14px #f00; }
+@keyframes blink { 0%,49% { opacity: 1; } 50%,100% { opacity: 0; } }
+
+/* Touch controls - positioned by JS (data-layout on body) */
+#mobile-controls { display: none; position: absolute; pointer-events: none; --b: 56px; }
+body[data-layout="portrait"] #mobile-controls,
+body[data-layout="landscape"] #mobile-controls { display: block; }
+#dpad, .mobile-side { position: absolute; pointer-events: auto; touch-action: none; }
+#dpad { display: grid; grid-template-columns: repeat(3, var(--b)); grid-template-rows: repeat(3, var(--b)); gap: calc(var(--b) * 0.08); }
+.mobile-side { display: flex; flex-direction: column; gap: calc(var(--b) * 0.25); }
+.dpad-btn, .mobile-btn {
+  width: var(--b); height: var(--b); border: 2px solid #ff4fa3; border-radius: 10px; background: #2a0018;
+  font-family: inherit; line-height: 1; padding: 0; display: flex; align-items: center; justify-content: center;
+  touch-action: none; cursor: pointer; box-shadow: 0 0 10px rgba(255,80,160,0.3);
+}
+.dpad-btn { color: #0ff; font-size: calc(var(--b) * 0.32); }
+.mobile-btn { color: #ff0; font-size: calc(var(--b) * 0.26); }
+.dpad-btn[data-dir="U"] { grid-column: 2; grid-row: 1; }
+.dpad-btn[data-dir="L"] { grid-column: 1; grid-row: 2; }
+.dpad-btn[data-dir="R"] { grid-column: 3; grid-row: 2; }
+.dpad-btn[data-dir="D"] { grid-column: 2; grid-row: 3; }
+.dpad-center { grid-column: 2; grid-row: 2; border-color: #111; background: #050515; box-shadow: none; pointer-events: none; opacity: 0.5; }
+.dpad-btn:not(:disabled):active, .dpad-btn.active, .mobile-btn:active, .mobile-btn.active { background: #ff4fa3; color: #fff; transform: scale(0.96); }
