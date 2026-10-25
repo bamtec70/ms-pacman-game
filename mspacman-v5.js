@@ -665,6 +665,7 @@
     $title.textContent = title;
     $sub.textContent = sub || "";
     const home = title === "MS. PAC-MAN";
+    if (window.WTPHi) { const $hs = document.getElementById("hs-table"); if (home) WTPHi.render($hs); else if (cls !== "gameover" && $hs) $hs.style.display = "none"; }
     if (home) {
       $hint.textContent = "BUILD V5 — PRESS SPACE OR TAP TO START";
       if ($ctrl) {
@@ -778,6 +779,7 @@
 
 
   function beginGame() {
+    if (window.WTPShare) WTPShare.hide();
     srand((Date.now() & 0xFFFF) ^ 0xA5A5);
     score = 0; lives = 3; level = 1; extra = false; fGot = [];
     hold = null;
@@ -1563,6 +1565,8 @@
         if (lives <= 0) {
           state = "over";
           showOV("GAME OVER", isTouchPrimary() ? "TAP TO RESTART" : "PRESS SPACE", "gameover");
+          if (window.WTPShare) WTPShare.show(score);
+          if (window.WTPHi && WTPHi.gameOver(score, document.getElementById("hs-table"), () => { $sub.textContent = isTouchPrimary() ? "TAP TO RESTART" : "PRESS SPACE"; })) $sub.textContent = "";
           return;
         }
         fullReset(false);
@@ -2465,6 +2469,7 @@
   $high.textContent = pad(high);
   buildMap();
   fullReset(true);
+  if (window.WTPHi) WTPHi.init({ key: "mspacman_hiscores_v1", seed: [[30000,"GCC"],[25000,"MSP"],[20000,"SUE"],[18000,"INK"],[16000,"PKY"],[14000,"BLK"],[12000,"JR "],[10000,"ANA"],[8000,"MID"],[5000,"WAY"]] });
   state = "title";
   showOV("MS. PAC-MAN", "INSERT COIN", null);
   hud();
